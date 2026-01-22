@@ -4,7 +4,10 @@ import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
+  // For GitHub Pages: set VITE_BASE_PATH=/repo-name/ in secrets
+  // For custom domain or local dev: leave unset (defaults to /)
+  base: mode === 'production' ? (process.env.VITE_BASE_PATH || '/') : '/',
   server: {
     host: "::",
     port: 8080,
