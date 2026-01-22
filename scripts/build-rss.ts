@@ -2,7 +2,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { config } from 'dotenv';
 import { nip19 } from 'nostr-tools';
+import { WebSocket } from 'ws';
 import { NRelay1, NostrEvent } from '@nostrify/nostrify';
+
+// Polyfill WebSocket for Node.js (required for Nostr relay connections)
+// @ts-expect-error - globalThis.WebSocket typing
+globalThis.WebSocket = WebSocket;
 // import { generateRSSFeed } from '../src/lib/rssGenerator.js'; // Can't import due to import.meta.env issues
 import type { PodcastEpisode, PodcastTrailer } from '../src/types/podcast.js';
 
