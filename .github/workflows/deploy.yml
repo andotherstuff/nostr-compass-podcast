@@ -37,21 +37,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          # Base path for GitHub Pages (e.g., /repo-name/ or / for custom domain)
-          VITE_BASE_PATH: ${{ secrets.VITE_BASE_PATH }}
-          VITE_CREATOR_NPUB: ${{ secrets.VITE_CREATOR_NPUB }}
-          VITE_PODCAST_TITLE: ${{ secrets.VITE_PODCAST_TITLE }}
-          VITE_PODCAST_DESCRIPTION: ${{ secrets.VITE_PODCAST_DESCRIPTION }}
-          VITE_PODCAST_AUTHOR: ${{ secrets.VITE_PODCAST_AUTHOR }}
-          VITE_PODCAST_EMAIL: ${{ secrets.VITE_PODCAST_EMAIL }}
-          VITE_PODCAST_IMAGE: ${{ secrets.VITE_PODCAST_IMAGE }}
-          VITE_PODCAST_WEBSITE: ${{ secrets.VITE_PODCAST_WEBSITE }}
-          VITE_PODCAST_CATEGORIES: ${{ secrets.VITE_PODCAST_CATEGORIES }}
-          VITE_PODCAST_LANGUAGE: ${{ secrets.VITE_PODCAST_LANGUAGE }}
-          VITE_PODCAST_COPYRIGHT: ${{ secrets.VITE_PODCAST_COPYRIGHT }}
-          VITE_PODCAST_EXPLICIT: ${{ secrets.VITE_PODCAST_EXPLICIT }}
-          VITE_PODCAST_VALUE_RECIPIENTS: ${{ secrets.VITE_PODCAST_VALUE_RECIPIENTS }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

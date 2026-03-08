@@ -1,34 +1,17 @@
 import { nip19 } from 'nostr-tools';
 
 /**
- * Podcast configuration for PODSTR
- * This defines the podcast metadata and creator information
- * Values are loaded from environment variables with fallbacks
+ * Podcast configuration for PODSTR 2.0
+ * 
+ * Edit this file directly to configure your podcast.
+ * All values are hardcoded - no environment variables needed!
+ * 
+ * TIP: Use Shakespeare.diy (https://shakespeare.diy) to easily configure
+ * these settings with AI assistance. See README.md for the configuration prompt.
  */
-
-/**
- * Safely parse JSON from environment variable
- */
-function parseJsonEnv<T>(envValue: string | undefined, fallback: T): T {
-  if (!envValue || envValue.trim() === '') return fallback;
-  try {
-    return JSON.parse(envValue) as T;
-  } catch (error) {
-    console.warn(`Failed to parse JSON from env var, using fallback:`, error);
-    return fallback;
-  }
-}
-
-/**
- * Parse comma-separated string to array
- */
-function parseArrayEnv(envValue: string | undefined, fallback: string[]): string[] {
-  if (!envValue || envValue.trim() === '') return fallback;
-  return envValue.split(',').map(s => s.trim()).filter(s => s.length > 0);
-}
 
 export interface PodcastConfig {
-  /** The hardcoded npub of the podcast creator */
+  /** The npub of the podcast creator */
   creatorNpub: string;
 
   /** Podcast metadata */
@@ -48,7 +31,7 @@ export interface PodcastConfig {
     value: {
       amount: number;
       currency: string;
-      recipients?: Array<{
+      recipients: Array<{
         name: string;
         type: 'node' | 'lnaddress';
         address: string;
@@ -60,23 +43,23 @@ export interface PodcastConfig {
     };
     type: 'episodic' | 'serial';
     complete: boolean;
-    // New Podcasting 2.0 fields
-    guid?: string; // Unique podcast identifier
-    medium?: 'podcast' | 'music' | 'video' | 'film' | 'audiobook' | 'newsletter' | 'blog';
-    publisher?: string; // Publisher name
+    // Podcasting 2.0 fields
+    guid: string;
+    medium: 'podcast' | 'music' | 'video' | 'film' | 'audiobook' | 'newsletter' | 'blog';
+    publisher: string;
     location?: {
       name: string;
-      geo?: string; // latitude,longitude
-      osm?: string; // OpenStreetMap identifier
+      geo?: string;
+      osm?: string;
     };
-    person?: Array<{
+    person: Array<{
       name: string;
       role: string;
       group?: string;
       img?: string;
       href?: string;
     }>;
-    license?: {
+    license: {
       identifier: string;
       url?: string;
     };
@@ -95,92 +78,106 @@ export interface PodcastConfig {
       reason?: string;
     };
     newFeedUrl?: string;
-    useOP3?: boolean;
+    useOP3: boolean;
   };
 
   /** RSS feed configuration */
   rss: {
-    ttl: number; // Cache time in minutes - RSS specific setting
+    ttl: number;
   };
 }
 
+// =============================================================================
+// PODCAST CONFIGURATION
+// =============================================================================
+// Edit the values below to configure your podcast.
+// Use Shakespeare.diy for AI-assisted configuration - see README.md
+// =============================================================================
+
 export const PODCAST_CONFIG: PodcastConfig = {
-  // Creator npub - loaded from environment
-  creatorNpub: import.meta.env.VITE_CREATOR_NPUB || "npub1km5prrxcgt5fwgjzjpltyswsuu7u7jcj2cx9hk2rwvxyk00v2jqsgv0a3h",
+  // ===========================================================================
+  // CREATOR IDENTITY
+  // ===========================================================================
+  creatorNpub: "npub1wav4fae3gyfy3xj298kxj2mj8phavz7vavps34przq02j7w902qq902923",
 
   podcast: {
-    title: import.meta.env.VITE_PODCAST_TITLE || "PODSTR Podcast",
-    description: import.meta.env.VITE_PODCAST_DESCRIPTION || "A Nostr-powered podcast exploring decentralized conversations",
-    author: import.meta.env.VITE_PODCAST_AUTHOR || "PODSTR Creator",
-    email: import.meta.env.VITE_PODCAST_EMAIL || "creator@podstr.example",
-    image: import.meta.env.VITE_PODCAST_IMAGE || "https://example.com/podcast-artwork.jpg",
-    language: import.meta.env.VITE_PODCAST_LANGUAGE || "en-us",
-    categories: parseArrayEnv(import.meta.env.VITE_PODCAST_CATEGORIES, ["Technology", "Social Networking", "Society & Culture"]),
-    explicit: import.meta.env.VITE_PODCAST_EXPLICIT === "true",
-    website: import.meta.env.VITE_PODCAST_WEBSITE || "https://podstr.example",
-    copyright: import.meta.env.VITE_PODCAST_COPYRIGHT || "© 2025 PODSTR Creator",
-    funding: parseArrayEnv(import.meta.env.VITE_PODCAST_FUNDING, ["/about"]),
-    locked: import.meta.env.VITE_PODCAST_LOCKED === "true",
-    value: {
-      amount: parseInt(import.meta.env.VITE_PODCAST_VALUE_AMOUNT || "1000", 10),
-      currency: import.meta.env.VITE_PODCAST_VALUE_CURRENCY || "sats",
-      recipients: parseJsonEnv(import.meta.env.VITE_PODCAST_VALUE_RECIPIENTS, [
-        {
-          name: "Podcast Host",
-          type: "node" as const,
-          address: "030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3",
-          split: 80,
-          fee: false
-        },
-        {
-          name: "Producer",
-          type: "lnaddress" as const, 
-          address: "producer@getalby.com",
-          split: 15,
-          customKey: "podcast",
-          customValue: "producer-fee"
-        },
-        {
-          name: "Platform Fee",
-          type: "node" as const,
-          address: "021f2f8e1e46a48d0a9f1b7e4e8b5c8d5e4f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6",
-          split: 5,
-          fee: true
-        }
-      ])
-    },
-    type: (import.meta.env.VITE_PODCAST_TYPE as "episodic" | "serial") || "episodic",
-    complete: import.meta.env.VITE_PODCAST_COMPLETE === "true",
-    // Podcasting 2.0 fields from environment
-    guid: import.meta.env.VITE_PODCAST_GUID || import.meta.env.VITE_CREATOR_NPUB || "npub1km5prrxcgt5fwgjzjpltyswsuu7u7jcj2cx9hk2rwvxyk00v2jqsgv0a3h",
-    medium: (import.meta.env.VITE_PODCAST_MEDIUM as "podcast" | "music" | "video" | "film" | "audiobook" | "newsletter" | "blog") || "podcast",
-    publisher: import.meta.env.VITE_PODCAST_PUBLISHER || import.meta.env.VITE_PODCAST_AUTHOR || "PODSTR Creator",
-    location: import.meta.env.VITE_PODCAST_LOCATION_NAME ? {
-      name: import.meta.env.VITE_PODCAST_LOCATION_NAME,
-      geo: import.meta.env.VITE_PODCAST_LOCATION_GEO || undefined,
-      osm: import.meta.env.VITE_PODCAST_LOCATION_OSM || undefined
-    } : undefined,
-    person: parseJsonEnv(import.meta.env.VITE_PODCAST_PERSON, [
-      {
-        name: import.meta.env.VITE_PODCAST_AUTHOR || "PODSTR Creator",
-        role: "host",
-        group: "cast"
-      }
-    ]),
+    // =========================================================================
+    // BASIC PODCAST INFO
+    // =========================================================================
+    title: "Nostr Compass Podcast",
+    description: "Weekly conversations with the developers building on Nostr. Companion podcast to the Nostr Compass newsletter covering NIP proposals, client updates, relay developments, and protocol changes.",
+    author: "Nostr Compass",
+    email: "nostrcompass@nostrcompass.org",
+    image: "https://nostrcompass.org/img/nostr-compass-podcast.jpg",
+    language: "en-us",
+    categories: ["Technology", "Software How-To", "Society & Culture"],
+    explicit: false,
+    website: "https://podcast.nostrcompass.org",
+    copyright: "2025-2026 Nostr Compass. CC BY 4.0",
+
+    // =========================================================================
+    // PODCASTING 2.0 SETTINGS
+    // =========================================================================
+    guid: "npub1wav4fae3gyfy3xj298kxj2mj8phavz7vavps34przq02j7w902qq902923",
+    medium: "podcast",
+    publisher: "Nostr Compass",
+    type: "episodic",
+    complete: false,
+    locked: false,
+
+    // =========================================================================
+    // LICENSE
+    // =========================================================================
     license: {
-      identifier: import.meta.env.VITE_PODCAST_LICENSE_IDENTIFIER || "CC BY 4.0",
-      url: import.meta.env.VITE_PODCAST_LICENSE_URL || "https://creativecommons.org/licenses/by/4.0/"
+      identifier: "CC BY 4.0",
+      url: "https://creativecommons.org/licenses/by/4.0/",
     },
-    txt: parseJsonEnv(import.meta.env.VITE_PODCAST_TXT, undefined),
-    remoteItem: parseJsonEnv(import.meta.env.VITE_PODCAST_REMOTE_ITEM, undefined),
-    block: parseJsonEnv(import.meta.env.VITE_PODCAST_BLOCK, undefined),
-    newFeedUrl: import.meta.env.VITE_PODCAST_NEW_FEED_URL || undefined,
-    useOP3: import.meta.env.VITE_PODCAST_USE_OP3 === "true"
+
+    // =========================================================================
+    // LIGHTNING VALUE-FOR-VALUE
+    // =========================================================================
+    value: {
+      amount: 1000,
+      currency: "sats",
+      recipients: [
+        {
+          name: "Nostr Compass",
+          type: "lnaddress",
+          address: "nostrcompass@nostrcompass.org",
+          split: 100,
+          fee: false,
+        },
+      ],
+    },
+
+    // =========================================================================
+    // FUNDING LINKS
+    // =========================================================================
+    funding: ["/about"],
+
+    // =========================================================================
+    // PODCAST PEOPLE
+    // =========================================================================
+    person: [
+      {
+        name: "Nostr Compass",
+        role: "host",
+        group: "cast",
+      },
+    ],
+
+    // =========================================================================
+    // ANALYTICS
+    // =========================================================================
+    useOP3: false,
   },
 
+  // ===========================================================================
+  // RSS FEED SETTINGS
+  // ===========================================================================
   rss: {
-    ttl: parseInt(import.meta.env.VITE_RSS_TTL || "60", 10)
-  }
+    ttl: 60,
+  },
 };
 
 /**
