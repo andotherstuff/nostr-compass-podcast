@@ -108,7 +108,7 @@ export const PODCAST_CONFIG: PodcastConfig = {
     description: "Weekly conversations with the developers building on Nostr. Companion podcast to the Nostr Compass newsletter covering NIP proposals, client updates, relay developments, and protocol changes.",
     author: "Nostr Compass",
     email: "nostrcompass@nostrcompass.org",
-    image: "https://nostrcompass.org/img/nostr-compass-podcast.jpg",
+    image: "https://nostrcompass.org/assets/images/profile.png",
     language: "en-us",
     categories: ["Technology", "Software How-To", "Society & Culture"],
     explicit: false,
@@ -143,7 +143,7 @@ export const PODCAST_CONFIG: PodcastConfig = {
         {
           name: "Nostr Compass",
           type: "lnaddress",
-          address: "nostrcompass@nostrcompass.org",
+          address: "nostrcompass@npub.cash",
           split: 100,
           fee: false,
         },
