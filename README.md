@@ -69,8 +69,11 @@ npm run dev
 # Run tests
 npm test
 
-# Build for production
+# Build only when needed for release or build-specific changes
 npm run build
+
+# Run tests plus a production build when you really need both
+npm run test:build
 
 # Generate RSS feed
 npx tsx scripts/build-rss.ts
@@ -316,6 +319,8 @@ Deploy to Vercel, Netlify, or GitHub Pages:
 npm run build
 # Deploy dist/ folder to your hosting provider
 ```
+
+For normal day-to-day changes, prefer `npm test` and skip `npm run build` unless you are validating deployment behavior, RSS/build output, or doing a release check.
 
 ### RSS Feed Updates
 - **Build-time**: RSS generated automatically during `npm run build`

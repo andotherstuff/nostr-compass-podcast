@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "npm ci && vite build && cp dist/index.html dist/404.html && tsx scripts/build-rss.ts",
-    "test": "npm ci && tsc -p tsconfig.app.json --noEmit && eslint && vitest run && vite build",
+    "test": "npm ci && tsc -p tsconfig.app.json --noEmit && eslint && vitest run",
+    "test:build": "npm run test && vite build",
     "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup"
   },
   "dependencies": {

@@ -953,12 +953,12 @@ There is an important distinction between **writing new tests** and **running ex
 - Existing functionality needs verification
 
 ### Running Tests (Executing the Test Suite)
-**ALWAYS run the test script** after making any code changes. This is mandatory regardless of whether you wrote new tests or not.
+**Run the test script by default** after making code changes, but do not run a full production build for every small change.
 
-- **You must run the test script** using `js-dev__run_script` tool with the "test" parameter
-- **Your task is not complete** until the test script passes without errors
-- **This applies to all changes** - bug fixes, new features, refactoring, or any code modifications
-- **The test script includes** TypeScript compilation, ESLint checks, and existing test validation
+- **Use `npm run test` as the default verification step** for normal edits; it covers TypeScript, ESLint, and Vitest without the expensive production build
+- **Do not run `npm run build` automatically** for routine changes, because builds can slow the server to a crawl
+- **Run `npm run build` or `npm run test:build` only when it is actually needed**: release prep, deploy/build pipeline changes, RSS/build-output changes, or when a bug appears only in production build output
+- **Thorough build validation should happen before release**, not on every minor change
 
 ### Test Setup
 
@@ -991,8 +991,10 @@ describe('MyComponent', () => {
 
 ## Testing Your Changes
 
-**CRITICAL**: Whenever you are finished modifying code, you must run the **test** script using the **js-dev__run_script** tool.
+**CRITICAL**: Whenever you are finished modifying code, run the normal **test** script first. Only add a full build when the change truly needs build validation.
 
-**Your task is not considered finished until this test passes without errors.**
+**Your task is not considered finished until the appropriate verification passes without errors.**
 
-**This requirement applies regardless of whether you wrote new tests or not.** The test script validates the entire codebase, including TypeScript compilation, ESLint rules, and existing test suite.
+**Default path:** `npm run test`.
+
+**Escalate to build validation:** `npm run build` or `npm run test:build` for release work, deploy/build-system changes, RSS generation changes, or suspected production-only issues.

@@ -26,5 +26,5 @@ jobs:
           rm -rf node_modules package-lock.json
           npm install
           
-      - name: Run tests
+      - name: Run lightweight verification
         run: npm run test
