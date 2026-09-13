@@ -563,11 +563,10 @@ async function buildRSS() {
 
     // Connect to multiple Nostr relays for better coverage
     const relayUrls = [
+      'wss://compass-relay.samt.st',
       'wss://relay.primal.net',
-      'wss://relay.nostr.band',
       'wss://relay.damus.io',
-      'wss://nos.lol',
-      'wss://relay.ditto.pub'
+      'wss://nos.lol'
     ];
 
     console.log(`🔌 Connecting to ${relayUrls.length} relays for better data coverage`);
@@ -624,11 +623,14 @@ async function buildRSS() {
     const distDir = path.resolve('dist');
     await fs.mkdir(distDir, { recursive: true });
 
-    // Write RSS file
+    // Write the canonical feed and the legacy compatibility alias from the
+    // same bytes so clients using either endpoint cannot observe drift.
     const rssPath = path.join(distDir, 'rss.xml');
+    const feedPath = path.join(distDir, 'feed.xml');
     await fs.writeFile(rssPath, rssContent, 'utf-8');
+    await fs.writeFile(feedPath, rssContent, 'utf-8');
 
-    console.log(`✅ RSS feed generated successfully at: ${rssPath}`);
+    console.log(`✅ RSS feed generated successfully at: ${rssPath} and ${feedPath}`);
     console.log(`📊 Feed size: ${(rssContent.length / 1024).toFixed(2)} KB`);
 
     // Write a health check file
@@ -636,6 +638,7 @@ async function buildRSS() {
     const healthData = {
       status: 'ok',
       endpoint: '/rss.xml',
+      aliases: ['/feed.xml'],
       generatedAt: new Date().toISOString(),
       episodeCount: episodes.length,
       trailerCount: trailers.length,
@@ -660,7 +663,7 @@ async function buildRSS() {
     console.log(`✅ .nojekyll file generated for GitHub Pages compatibility`);
 
     console.log('\n🎉 RSS feed build completed successfully!');
-    console.log('📡 Feed will be available at: /rss.xml');
+    console.log('📡 Feed will be available at: /rss.xml and /feed.xml');
     console.log('🏥 Health check available at: /rss-health');
 
     process.exit(0);
