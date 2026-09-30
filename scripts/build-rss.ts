@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { nip19 } from 'nostr-tools';
+import { nip19, verifyEvent, type Event } from 'nostr-tools';
+import { mergeEpisodeEvents, audioByteLength } from './episode-archive.js';
 import { WebSocket } from 'ws';
 import { NRelay1, NostrEvent } from '@nostrify/nostrify';
 
@@ -70,15 +71,20 @@ function formatDurationForRSS(seconds: number): string {
 /**
  * Node-compatible RSS feed generation
  */
-function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[], podcastConfig: PodcastConfig): string {
+function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[], podcastConfig: PodcastConfig, audioLengths: Map<string, number>): string {
   const baseUrl = podcastConfig.podcast.website || 'https://podstr.example';
   const useOP3 = podcastConfig.podcast.useOP3 || false;
+  const enclosureLength = (url: string): number => {
+    const length = audioLengths.get(url);
+    if (!Number.isSafeInteger(length) || !length || length < 0) throw new Error(`Missing verified enclosure length: ${url}`);
+    return length;
+  };
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
      xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
      xmlns:content="http://purl.org/rss/1.0/modules/content/"
-     xmlns:podcast="https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/1.0.md">
+     xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>${escapeXml(podcastConfig.podcast.title)}</title>
     <description>${escapeXml(podcastConfig.podcast.description)}</description>
@@ -144,14 +150,14 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
       <link>${escapeXml(baseUrl)}/${encodeEpisodeAsNaddr(episode.authorPubkey, episode.identifier)}</link>
       <pubDate>${episode.publishDate.toUTCString()}</pubDate>
       <guid isPermaLink="false">${episode.authorPubkey}:${episode.identifier}</guid>
-      <enclosure url="${escapeXml(audioUrl)}" type="${episode.audioType}" length="0" />
-      ${videoUrl ? `<enclosure url="${escapeXml(videoUrl)}" type="${episode.videoType || 'video/mp4'}" length="0" />` : ''}
+      <enclosure url="${escapeXml(audioUrl)}" type="${episode.audioType}" length="${enclosureLength(episode.audioUrl)}" />
+      ${videoUrl ? `<enclosure url="${escapeXml(videoUrl)}" type="${episode.videoType || 'video/mp4'}" length="${enclosureLength(episode.videoUrl!)}" />` : ''}
       <itunes:duration>${episode.duration ? formatDurationForRSS(episode.duration) : '00:00'}</itunes:duration>
       <itunes:explicit>${episode.explicit ? 'yes' : 'no'}</itunes:explicit>
       ${episode.imageUrl ? `<itunes:image href="${escapeXml(episode.imageUrl)}" />` : ''}
       ${transcriptUrl ? `<podcast:transcript url="${escapeXml(transcriptUrl)}" type="text/plain" />` : ''}
       ${chaptersUrl ? `<podcast:chapters url="${escapeXml(chaptersUrl)}" type="application/json+chapters" />` : ''}
-      ${episode.content ? `<content:encoded><![CDATA[${episode.content}]]></content:encoded>` : ''}
+      ${episode.content ? `<content:encoded><![CDATA[${episode.content.replace(/\]\]>/g, ']]]]><![CDATA[>')}]]></content:encoded>` : ''}
       ${episode.value && episode.value.enabled && episode.value.recipients && episode.value.recipients.length > 0 ?
         `<podcast:value type="${episode.value.currency || 'lightning'}" method="lightning">
         ${episode.value.recipients.map(recipient =>
@@ -169,6 +175,8 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
  */
 function validatePodcastEpisode(event: NostrEvent, creatorPubkeyHex: string): boolean {
   if (event.kind !== PODCAST_KINDS.EPISODE) return false;
+  if (!verifyEvent(event as Event)) return false;
+  try { mergeEpisodeEvents([event as Event], creatorPubkeyHex); } catch { return false; }
 
   // Check for required title tag
   const title = event.tags.find(([name]) => name === 'title')?.[1];
@@ -196,7 +204,7 @@ function eventToPodcastEpisode(event: NostrEvent): PodcastEpisode {
 
   // Extract audio URL and type from audio tag
   const audioTag = tags.get('audio');
-  const audioUrl = audioTag?.[0] || '';
+  const audioUrl = audioTag?.[0]?.trim() || '';
   const audioType = audioTag?.[1] || 'audio/mpeg';
 
   // Extract video URL and type from video tag
@@ -284,6 +292,7 @@ function eventToPodcastEpisode(event: NostrEvent): PodcastEpisode {
  */
 function validatePodcastTrailer(event: NostrEvent, creatorPubkeyHex: string): boolean {
   if (event.kind !== PODCAST_KINDS.TRAILER) return false;
+  if (!verifyEvent(event as Event)) return false;
 
   // Check for required title tag
   const title = event.tags.find(([name]) => name === 'title')?.[1];
@@ -364,7 +373,7 @@ async function fetchPodcastMetadataMultiRelay(relays: Array<{url: string, relay:
 
       if (events.length > 0) {
         console.log(`✅ Found ${events.length} metadata events from ${url}`);
-        return events;
+        return events.filter(event => event.pubkey === creatorPubkeyHex && verifyEvent(event as Event));
       }
       return [];
     } catch (error) {
@@ -386,7 +395,7 @@ async function fetchPodcastMetadataMultiRelay(relays: Array<{url: string, relay:
   if (allEvents.length > 0) {
     // Get the most recent event from all relays
     const latestEvent = allEvents.reduce((latest, current) =>
-      current.created_at > latest.created_at ? current : latest
+      current.created_at > latest.created_at || (current.created_at === latest.created_at && current.id < latest.id) ? current : latest
     );
 
     const updatedAt = new Date(latestEvent.created_at * 1000);
@@ -454,7 +463,7 @@ async function fetchPodcastEpisodesMultiRelay(relays: Array<{url: string, relay:
     
     const existing = episodesByIdentifier.get(identifier);
     // Keep the latest version (highest created_at timestamp)
-    if (!existing || event.created_at > existing.created_at) {
+    if (!existing || event.created_at > existing.created_at || (event.created_at === existing.created_at && event.id < existing.id)) {
       episodesByIdentifier.set(identifier, event);
     }
   });
@@ -520,7 +529,7 @@ async function fetchPodcastTrailersMultiRelay(relays: Array<{url: string, relay:
     
     const existing = trailersByIdentifier.get(identifier);
     // Keep the latest version (highest created_at timestamp)
-    if (!existing || event.created_at > existing.created_at) {
+    if (!existing || event.created_at > existing.created_at || (event.created_at === existing.created_at && event.id < existing.id)) {
       trailersByIdentifier.set(identifier, event);
     }
   });
@@ -596,7 +605,19 @@ async function buildRSS() {
       }
 
       // Fetch episodes from multiple relays
-      episodes = await fetchPodcastEpisodesMultiRelay(relays, creatorPubkeyHex);
+      const archive = JSON.parse(await fs.readFile(path.resolve('data/episode-archive.json'), 'utf8')) as Event[];
+      const archivedEpisodes = mergeEpisodeEvents(archive, creatorPubkeyHex).map(eventToPodcastEpisode);
+      try { episodes = await fetchPodcastEpisodesMultiRelay(relays, creatorPubkeyHex); }
+      catch (error) { console.warn('Relay discovery failed; retaining verified archive', error); episodes = []; }
+      const byIdentifier = new Map(archivedEpisodes.map(ep => [ep.identifier, ep]));
+      for (const ep of episodes) {
+        const previous = byIdentifier.get(ep.identifier);
+        if (!previous || ep.createdAt.getTime() > previous.createdAt.getTime() ||
+            (ep.createdAt.getTime() === previous.createdAt.getTime() && ep.id < previous.id)) {
+          byIdentifier.set(ep.identifier, ep);
+        }
+      }
+      episodes = [...byIdentifier.values()].sort((a,b) => b.publishDate.getTime()-a.publishDate.getTime());
 
       // Fetch trailers from multiple relays
       trailers = await fetchPodcastTrailersMultiRelay(relays, creatorPubkeyHex);
@@ -617,7 +638,14 @@ async function buildRSS() {
     console.log(`🔍 OP3 Analytics: ${finalConfig.podcast.useOP3 ? 'ENABLED' : 'DISABLED'}`);
 
     // Generate RSS feed with fetched data
-    const rssContent = generateRSSFeed(episodes, trailers, finalConfig);
+    const lengths = JSON.parse(await fs.readFile(path.resolve('data/audio-lengths.json'), 'utf8')) as Record<string, number>;
+    const audioLengths = new Map<string, number>();
+    for (const episode of episodes) {
+      const knownLength = lengths[episode.audioUrl];
+      audioLengths.set(episode.audioUrl, await audioByteLength(episode.audioUrl, knownLength ? String(knownLength) : undefined));
+      if (episode.videoUrl) audioLengths.set(episode.videoUrl, await audioByteLength(episode.videoUrl));
+    }
+    const rssContent = generateRSSFeed(episodes, trailers, finalConfig, audioLengths);
 
     // Ensure dist directory exists
     const distDir = path.resolve('dist');
