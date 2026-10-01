@@ -140,6 +140,9 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
     ${[...episodes].sort(compareEpisodeOrder).map(episode => {
       const episodeNumber = resolveEpisodeNumber(episode.title, episode.episodeNumber);
       const seasonNumber = positiveEpisodeInteger(episode.seasonNumber);
+      if (episodeNumber === undefined) {
+        console.warn(`RSS episode has no valid number: ${episode.identifier}. Set a positive integer episode tag; this item follows numbered releases.`);
+      }
       // Apply OP3 prefix to URLs if enabled
       const audioUrl = useOP3 ? addOP3Prefix(episode.audioUrl) : episode.audioUrl;
       const videoUrl = episode.videoUrl && useOP3 ? addOP3Prefix(episode.videoUrl) : episode.videoUrl;

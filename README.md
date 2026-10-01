@@ -325,6 +325,7 @@ For normal day-to-day changes, prefer `npm test` and skip `npm run build` unless
 ### RSS Feed Updates
 - **Episode order**: Both `/rss.xml` and `/feed.xml` use descending season/episode order. Valid episode tags take precedence; historical numbered Nostr Compass and Logbook titles supply missing numbers. Unnumbered items follow numbered episodes, ordered by their actual publication dates. Equal numbers use date and stable identifier tie-breakers. Backfilled episodes never move ahead of a higher episode number solely because they were published later.
 - **Preservation**: RSS includes `itunes:episode` and, when present, `itunes:season`. Sorting does not change publication dates, stable GUIDs, audio URLs or signed Nostr events. Clients that explicitly sort by publication date can still display their chosen date order.
+- **Publishing metadata**: Set a positive integer `episode` tag on new releases and a positive integer `season` tag when applicable. Logbook Episode 38 and Nostr Compass Podcast 39 onward continue the same numbered series, not separate seasons. The build warns about unnumbered items instead of silently treating a recent special as a numbered release.
 - **Build-time**: RSS generated automatically during `npm run build`
 - **Manual**: Run `npx tsx scripts/build-rss.ts` to regenerate
 - **Periodic**: Set up cron jobs using updated `RSS_CRON_SETUP.md` guide  

@@ -47,6 +47,9 @@ jobs:
           path: './dist'
 
   deploy:
+    # A manually dispatched feature branch may validate its build, but must
+    # never replace the production site before that branch is merged.
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

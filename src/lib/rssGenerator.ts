@@ -1,7 +1,7 @@
 import type { PodcastEpisode, RSSItem } from '@/types/podcast';
 import { PODCAST_CONFIG, type PodcastConfig } from './podcastConfig';
 import { encodeEpisodeAsNaddr } from './nip19Utils';
-import { compareEpisodeOrder, resolveEpisodeNumber } from './episodeOrdering';
+import { compareEpisodeOrder, positiveEpisodeInteger, resolveEpisodeNumber } from './episodeOrdering';
 
 
 /**
@@ -33,7 +33,7 @@ function episodeToRSSItem(episode: PodcastEpisode, config?: PodcastConfig): RSSI
     },
     duration: episode.duration ? formatDuration(episode.duration) : undefined,
     episodeNumber: resolveEpisodeNumber(episode.title, episode.episodeNumber),
-    seasonNumber: episode.seasonNumber,
+    seasonNumber: positiveEpisodeInteger(episode.seasonNumber),
     explicit: episode.explicit,
     image: episode.imageUrl,
     // Per-episode value splits (overrides podcast defaults)

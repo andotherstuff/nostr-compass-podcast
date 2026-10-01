@@ -12,7 +12,7 @@ export function positiveEpisodeInteger(value: unknown): number | undefined {
 export function resolveEpisodeNumber(title: string, explicit?: unknown): number | undefined {
   const tagged = positiveEpisodeInteger(explicit);
   if (tagged !== undefined) return tagged;
-  const legacy = title.match(/^(?:Nostr Compass(?: Podcast)?\s*#\s*|Logbook Episode\s+)(\d+)\b/i);
+  const legacy = title.match(/^(?:Nostr Compass(?: Podcast)?\s*#\s*|Logbook Episode\s+)(\d+)\b(?!\.\d)/i);
   return positiveEpisodeInteger(legacy?.[1]);
 }
 
@@ -40,5 +40,6 @@ export function compareEpisodeOrder(a: OrderedEpisode, b: OrderedEpisode): numbe
     const value = episode.publishDate.getTime();
     return Number.isFinite(value) ? value : 0;
   };
-  return timestamp(b) - timestamp(a) || a.identifier.localeCompare(b.identifier);
+  return timestamp(b) - timestamp(a)
+    || (a.identifier < b.identifier ? -1 : a.identifier > b.identifier ? 1 : 0);
 }
