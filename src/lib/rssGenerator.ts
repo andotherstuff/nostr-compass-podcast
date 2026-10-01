@@ -1,6 +1,7 @@
 import type { PodcastEpisode, RSSItem } from '@/types/podcast';
 import { PODCAST_CONFIG, type PodcastConfig } from './podcastConfig';
 import { encodeEpisodeAsNaddr } from './nip19Utils';
+import { compareEpisodeOrder, resolveEpisodeNumber } from './episodeOrdering';
 
 
 /**
@@ -31,7 +32,7 @@ function episodeToRSSItem(episode: PodcastEpisode, config?: PodcastConfig): RSSI
       type: episode.audioType || 'audio/mpeg'
     },
     duration: episode.duration ? formatDuration(episode.duration) : undefined,
-    episodeNumber: episode.episodeNumber,
+    episodeNumber: resolveEpisodeNumber(episode.title, episode.episodeNumber),
     seasonNumber: episode.seasonNumber,
     explicit: episode.explicit,
     image: episode.imageUrl,
@@ -71,8 +72,8 @@ function escapeXml(text: string): string {
  */
 export function generateRSSFeed(episodes: PodcastEpisode[], config?: PodcastConfig): string {
   const podcastConfig = config || PODCAST_CONFIG;
-  const rssItems = episodes
-    .sort((a, b) => b.publishDate.getTime() - a.publishDate.getTime())
+  const rssItems = [...episodes]
+    .sort(compareEpisodeOrder)
     .map(episode => episodeToRSSItem(episode, podcastConfig));
 
   // Get base URL - handle both server and client environments

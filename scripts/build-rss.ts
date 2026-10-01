@@ -16,6 +16,7 @@ import { PODCAST_CONFIG, PodcastConfig } from '../src/lib/podcastConfig.js';
 import { encodeEpisodeAsNaddr } from '../src/lib/nip19Utils.js';
 // Import OP3 utilities
 import { addOP3Prefix } from '../src/lib/op3Utils.js';
+import { compareEpisodeOrder, resolveEpisodeNumber, positiveEpisodeInteger } from '../src/lib/episodeOrdering.js';
 
 // Podcast kinds used by PODSTR
 const PODCAST_KINDS = {
@@ -136,7 +137,9 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
       `<podcast:trailer pubdate="${trailer.pubDate.toUTCString()}" url="${escapeXml(trailer.url)}"${trailer.length ? ` length="${trailer.length}"` : ''}${trailer.type ? ` type="${escapeXml(trailer.type)}"` : ''}${trailer.season ? ` season="${trailer.season}"` : ''}>${escapeXml(trailer.title)}</podcast:trailer>`
     ).join('\n    ')}
 
-    ${episodes.map(episode => {
+    ${[...episodes].sort(compareEpisodeOrder).map(episode => {
+      const episodeNumber = resolveEpisodeNumber(episode.title, episode.episodeNumber);
+      const seasonNumber = positiveEpisodeInteger(episode.seasonNumber);
       // Apply OP3 prefix to URLs if enabled
       const audioUrl = useOP3 ? addOP3Prefix(episode.audioUrl) : episode.audioUrl;
       const videoUrl = episode.videoUrl && useOP3 ? addOP3Prefix(episode.videoUrl) : episode.videoUrl;
@@ -153,6 +156,8 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
       <enclosure url="${escapeXml(audioUrl)}" type="${episode.audioType}" length="${enclosureLength(episode.audioUrl)}" />
       ${videoUrl ? `<enclosure url="${escapeXml(videoUrl)}" type="${episode.videoType || 'video/mp4'}" length="${enclosureLength(episode.videoUrl!)}" />` : ''}
       <itunes:duration>${episode.duration ? formatDurationForRSS(episode.duration) : '00:00'}</itunes:duration>
+      ${episodeNumber !== undefined ? `<itunes:episode>${episodeNumber}</itunes:episode>` : ''}
+      ${seasonNumber !== undefined ? `<itunes:season>${seasonNumber}</itunes:season>` : ''}
       <itunes:explicit>${episode.explicit ? 'yes' : 'no'}</itunes:explicit>
       ${episode.imageUrl ? `<itunes:image href="${escapeXml(episode.imageUrl)}" />` : ''}
       ${transcriptUrl ? `<podcast:transcript url="${escapeXml(transcriptUrl)}" type="text/plain" />` : ''}
@@ -255,10 +260,10 @@ function eventToPodcastEpisode(event: NostrEvent): PodcastEpisode {
 
   // Parse episode and season numbers
   const episodeNumberStr = tags.get('episode')?.[0];
-  const episodeNumber = episodeNumberStr ? parseInt(episodeNumberStr, 10) : undefined;
+  const episodeNumber = resolveEpisodeNumber(title, episodeNumberStr);
   
   const seasonNumberStr = tags.get('season')?.[0];
-  const seasonNumber = seasonNumberStr ? parseInt(seasonNumberStr, 10) : undefined;
+  const seasonNumber = positiveEpisodeInteger(seasonNumberStr);
 
   return {
     id: event.id,
@@ -471,10 +476,10 @@ async function fetchPodcastEpisodesMultiRelay(relays: Array<{url: string, relay:
   const uniqueEvents = Array.from(episodesByIdentifier.values());
   console.log(`✅ Found ${uniqueEvents.length} unique episodes from ${allResults.length} relays`);
 
-  // Convert to PodcastEpisode format and sort by publishDate (newest first)
+  // Episode numbers preserve sequence when older episodes are backfilled later.
   const episodes = uniqueEvents.map(event => eventToPodcastEpisode(event));
 
-  return episodes.sort((a, b) => b.publishDate.getTime() - a.publishDate.getTime());
+  return episodes.sort(compareEpisodeOrder);
 }
 
 /**
@@ -617,7 +622,7 @@ async function buildRSS() {
           byIdentifier.set(ep.identifier, ep);
         }
       }
-      episodes = [...byIdentifier.values()].sort((a,b) => b.publishDate.getTime()-a.publishDate.getTime());
+      episodes = [...byIdentifier.values()].sort(compareEpisodeOrder);
 
       // Fetch trailers from multiple relays
       trailers = await fetchPodcastTrailersMultiRelay(relays, creatorPubkeyHex);
