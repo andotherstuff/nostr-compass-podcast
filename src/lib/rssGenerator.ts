@@ -1,7 +1,7 @@
 import type { PodcastEpisode, RSSItem } from '@/types/podcast';
 import { PODCAST_CONFIG, type PodcastConfig } from './podcastConfig';
 import { encodeEpisodeAsNaddr } from './nip19Utils';
-import { compareEpisodeOrder, positiveEpisodeInteger, resolveEpisodeNumber } from './episodeOrdering';
+import { compareEpisodeOrder, resolveEpisodeNumber } from './episodeOrdering';
 
 
 /**
@@ -33,7 +33,6 @@ function episodeToRSSItem(episode: PodcastEpisode, config?: PodcastConfig): RSSI
     },
     duration: episode.duration ? formatDuration(episode.duration) : undefined,
     episodeNumber: resolveEpisodeNumber(episode.title, episode.episodeNumber),
-    seasonNumber: positiveEpisodeInteger(episode.seasonNumber),
     explicit: episode.explicit,
     image: episode.imageUrl,
     // Per-episode value splits (overrides podcast defaults)
@@ -193,7 +192,6 @@ export function generateRSSFeed(episodes: PodcastEpisode[], config?: PodcastConf
       <itunes:author>${escapeXml(podcastConfig.podcast.author)}</itunes:author>
       ${item.duration ? `<itunes:duration>${item.duration}</itunes:duration>` : ''}
       ${item.episodeNumber ? `<itunes:episode>${item.episodeNumber}</itunes:episode>` : ''}
-      ${item.seasonNumber ? `<itunes:season>${item.seasonNumber}</itunes:season>` : ''}
       <itunes:explicit>${item.explicit ? 'true' : 'false'}</itunes:explicit>
       ${item.image ? `<itunes:image href="${escapeXml(item.image)}" />` : ''}
 

@@ -139,7 +139,6 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
 
     ${[...episodes].sort(compareEpisodeOrder).map(episode => {
       const episodeNumber = resolveEpisodeNumber(episode.title, episode.episodeNumber);
-      const seasonNumber = positiveEpisodeInteger(episode.seasonNumber);
       if (episodeNumber === undefined) {
         console.warn(`RSS episode has no valid number: ${episode.identifier}. Set a positive integer episode tag; this item follows numbered releases.`);
       }
@@ -160,7 +159,6 @@ function generateRSSFeed(episodes: PodcastEpisode[], trailers: PodcastTrailer[],
       ${videoUrl ? `<enclosure url="${escapeXml(videoUrl)}" type="${episode.videoType || 'video/mp4'}" length="${enclosureLength(episode.videoUrl!)}" />` : ''}
       <itunes:duration>${episode.duration ? formatDurationForRSS(episode.duration) : '00:00'}</itunes:duration>
       ${episodeNumber !== undefined ? `<itunes:episode>${episodeNumber}</itunes:episode>` : ''}
-      ${seasonNumber !== undefined ? `<itunes:season>${seasonNumber}</itunes:season>` : ''}
       <itunes:explicit>${episode.explicit ? 'yes' : 'no'}</itunes:explicit>
       ${episode.imageUrl ? `<itunes:image href="${escapeXml(episode.imageUrl)}" />` : ''}
       ${transcriptUrl ? `<podcast:transcript url="${escapeXml(transcriptUrl)}" type="text/plain" />` : ''}

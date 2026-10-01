@@ -24,14 +24,11 @@ interface OrderedEpisode {
   identifier: string;
 }
 
-/** Descending season/episode order, independent of backfill or edit timestamps. */
+/** Compass uses continuous episode numbering, not season-reset numbering. */
 export function compareEpisodeOrder(a: OrderedEpisode, b: OrderedEpisode): number {
   const aNumber = resolveEpisodeNumber(a.title, a.episodeNumber);
   const bNumber = resolveEpisodeNumber(b.title, b.episodeNumber);
   if (aNumber !== undefined && bNumber !== undefined) {
-    const season = (positiveEpisodeInteger(b.seasonNumber) ?? 1)
-      - (positiveEpisodeInteger(a.seasonNumber) ?? 1);
-    if (season) return season;
     if (aNumber !== bNumber) return bNumber - aNumber;
   } else if (aNumber !== undefined || bNumber !== undefined) {
     return aNumber !== undefined ? -1 : 1;
